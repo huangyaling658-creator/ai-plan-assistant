@@ -538,13 +538,13 @@ const DB = {
         const uid = this._uid;
         const [plans, profile, goals, weekly, daily, sums, mods, apiConf] = await Promise.all([
             sb.from('uploaded_plans').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
-            sb.from('style_profiles').select('*').eq('user_id', uid).single(),
+            sb.from('style_profiles').select('*').eq('user_id', uid).maybeSingle(),
             sb.from('monthly_goals').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(1),
             sb.from('weekly_plans').select('*').eq('user_id', uid),
             sb.from('daily_plans').select('*').eq('user_id', uid),
             sb.from('summaries').select('*').eq('user_id', uid),
             sb.from('modification_history').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(30),
-            sb.from('api_configs').select('*').eq('user_id', uid).single()
+            sb.from('api_configs').select('*').eq('user_id', uid).maybeSingle()
         ]);
 
         this._cache.uploaded_plans = plans.data || [];
