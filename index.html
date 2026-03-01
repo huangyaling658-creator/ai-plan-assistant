@@ -530,21 +530,28 @@ const DB = {
 
     async init(userId) {
         this._uid = userId;
-        this._cache = {};
-        await this._loadAll();
+        this._cache = { uploaded_plans: [], style_profile: null, monthly_goals: null, weekly_plans: {}, daily_plans: {}, summaries: {}, modification_history: [], api_config: null };
+        try { await this._loadAll(); } catch(e) { console.error('DB._loadAll failed:', e); }
+    },
+
+    _queryWithTimeout(promise, label, ms = 8000) {
+        return Promise.race([
+            promise.then(r => { if (r.error) console.warn('DB query warn [' + label + ']:', r.error.message); return r; }),
+            new Promise(resolve => setTimeout(() => { console.warn('DB query timeout [' + label + ']'); resolve({ data: null, error: { message: 'timeout' } }); }, ms))
+        ]);
     },
 
     async _loadAll() {
         const uid = this._uid;
         const [plans, profile, goals, weekly, daily, sums, mods, apiConf] = await Promise.all([
-            sb.from('uploaded_plans').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
-            sb.from('style_profiles').select('*').eq('user_id', uid).maybeSingle(),
-            sb.from('monthly_goals').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(1),
-            sb.from('weekly_plans').select('*').eq('user_id', uid),
-            sb.from('daily_plans').select('*').eq('user_id', uid),
-            sb.from('summaries').select('*').eq('user_id', uid),
-            sb.from('modification_history').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(30),
-            sb.from('api_configs').select('*').eq('user_id', uid).maybeSingle()
+            this._queryWithTimeout(sb.from('uploaded_plans').select('*').eq('user_id', uid).order('created_at', { ascending: false }), 'uploaded_plans'),
+            this._queryWithTimeout(sb.from('style_profiles').select('*').eq('user_id', uid).maybeSingle(), 'style_profiles'),
+            this._queryWithTimeout(sb.from('monthly_goals').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(1), 'monthly_goals'),
+            this._queryWithTimeout(sb.from('weekly_plans').select('*').eq('user_id', uid), 'weekly_plans'),
+            this._queryWithTimeout(sb.from('daily_plans').select('*').eq('user_id', uid), 'daily_plans'),
+            this._queryWithTimeout(sb.from('summaries').select('*').eq('user_id', uid), 'summaries'),
+            this._queryWithTimeout(sb.from('modification_history').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(30), 'mod_history'),
+            this._queryWithTimeout(sb.from('api_configs').select('*').eq('user_id', uid).maybeSingle(), 'api_configs')
         ]);
 
         this._cache.uploaded_plans = plans.data || [];
@@ -1379,8 +1386,17 @@ sb.auth.onAuthStateChange(async (event, session) => {
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('userEmail').textContent = session.user.email;
         showLoading('正在加载你的数据...');
-        try { await DB.init(session.user.id); await initializeApp(); hideLoading(); }
-        catch (e) { hideLoading(); showToast('数据加载失败: ' + e.message, 'error'); }
+        const safetyTimer = setTimeout(() => { hideLoading(); console.warn('Loading safety timeout triggered'); }, 12000);
+        try {
+            await DB.init(session.user.id);
+            try { await initializeApp(); } catch(e2) { console.error('initializeApp error:', e2); }
+        } catch (e) {
+            console.error('DB.init error:', e);
+            showToast('数据加载失败: ' + e.message, 'error');
+        } finally {
+            clearTimeout(safetyTimer);
+            hideLoading();
+        }
     } else {
         document.getElementById('authScreen').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'none';
