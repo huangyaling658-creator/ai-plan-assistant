@@ -1,0 +1,2633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 计划助手</title>
+    <style>
+        :root {
+            --primary-dark: #0f0c29;
+            --primary: #302b63;
+            --primary-light: #24243e;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border: #e0e0e0;
+            --border-light: #f0f0f0;
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+            --shadow-lg: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .app-header {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary), var(--primary-light));
+            color: white;
+            padding: 18px var(--space-xl);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .app-header h1 { font-size: 20px; font-weight: 700; }
+        .app-header .subtitle { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+        .header-status {
+            font-size: 12px;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-status .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+        .header-status .dot.off { background: var(--danger); }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: white;
+            border-bottom: 2px solid var(--border-light);
+            position: sticky;
+            top: 58px;
+            z-index: 99;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 14px 16px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            position: relative;
+        }
+        .tab-btn:hover { color: var(--primary); background: #f8f7ff; }
+        .tab-btn.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 20%;
+            width: 60%;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px 3px 0 0;
+        }
+
+        /* Views */
+        .view { display: none; padding: var(--space-lg); max-width: 1100px; margin: 0 auto; }
+        .view.active { display: block; }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-md);
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(48,43,99,0.4); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover:not(:disabled) { background: #0ea372; }
+        .btn-outline {
+            background: white;
+            color: var(--primary);
+            border: 1.5px solid var(--primary);
+        }
+        .btn-outline:hover:not(:disabled) { background: #f8f7ff; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-ghost {
+            background: #f0f0f0;
+            color: var(--text-secondary);
+        }
+        .btn-ghost:hover { background: #e0e0e0; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* Form elements */
+        textarea, input[type="text"], input[type="password"] {
+            width: 100%;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+        textarea:focus, input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(48,43,99,0.1);
+        }
+        select {
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+        select:focus { outline: none; border-color: var(--primary); }
+        label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block; }
+
+        /* Upload zone */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-lg);
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--primary);
+            background: #f8f7ff;
+        }
+        .upload-zone .icon { font-size: 36px; margin-bottom: 8px; }
+        .upload-zone .hint { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+
+        /* History list */
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            margin-bottom: 8px;
+            transition: background 0.15s;
+        }
+        .history-item:hover { background: #f8f9fa; }
+        .history-item .info { flex: 1; }
+        .history-item .name { font-weight: 500; font-size: 14px; }
+        .history-item .meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .history-item .actions { display: flex; gap: 6px; }
+
+        /* Plan sections */
+        .plan-container { margin-top: var(--space-md); }
+        .plan-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 16px 0 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-light);
+            position: relative;
+        }
+        .plan-section-title[contenteditable="true"] {
+            outline: none;
+            background: #f0eeff;
+            border-radius: var(--radius-sm);
+            padding: 6px 8px;
+        }
+        .plan-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            transition: background 0.15s;
+            position: relative;
+            group: plan-item;
+        }
+        .plan-item:hover { background: #f8f9fa; }
+        .plan-item .toggle-done {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: transparent;
+            background: white;
+        }
+        .plan-item .toggle-done:hover {
+            border-color: var(--success);
+            color: #ccc;
+        }
+        .plan-item.completed .toggle-done {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+        .plan-item.completed .plan-item-text {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+        .plan-item-text {
+            flex: 1;
+            line-height: 1.5;
+            cursor: text;
+            min-height: 22px;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+        .plan-item-text[contenteditable="true"] {
+            outline: none;
+            background: #f0f7ff;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+        .plan-item .item-delete {
+            opacity: 0;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.15s;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .plan-item:hover .item-delete { opacity: 0.5; }
+        .plan-item .item-delete:hover { opacity: 1; background: #fee2e2; }
+        .plan-text-line {
+            padding: 4px 12px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: text;
+        }
+        .plan-text-line[contenteditable="true"] {
+            outline: none;
+            background: #f0f7ff;
+            border-radius: 3px;
+        }
+        .add-task-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            margin: 4px 0 4px 32px;
+            color: var(--text-muted);
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: all 0.15s;
+            border: 1px dashed transparent;
+        }
+        .add-task-btn:hover {
+            color: var(--primary);
+            background: #f8f7ff;
+            border-color: var(--primary);
+        }
+
+        /* Style profile */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+        }
+        .profile-field {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--primary);
+        }
+        .profile-field .field-name {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .profile-field .field-value {
+            margin-top: 4px;
+            font-size: 14px;
+            word-break: break-word;
+        }
+
+        /* Summary / Analysis */
+        .summary-content h2 { font-size: 18px; margin: 20px 0 12px; color: var(--primary); }
+        .summary-content h3 { font-size: 15px; margin: 16px 0 8px; }
+        .summary-content li { margin-left: 20px; margin-bottom: 4px; }
+        .summary-content strong { color: var(--text-primary); }
+
+        /* Date nav */
+        .date-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: var(--space-md);
+        }
+        .date-nav .current-date {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: var(--shadow-md);
+            animation: toastIn 0.3s ease;
+            max-width: 360px;
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--info); }
+        .toast.warning { background: var(--warning); }
+        @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .loading-overlay.hidden { display: none; }
+        .loading-box {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 32px 48px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+
+        /* Stats row */
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: var(--space-md);
+        }
+        .stat-card {
+            flex: 1;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+        .stat-card .stat-value { font-size: 28px; font-weight: 700; }
+        .stat-card .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .stat-card.primary { background: #f0eeff; }
+        .stat-card.primary .stat-value { color: var(--primary); }
+        .stat-card.success { background: #d1fae5; }
+        .stat-card.success .stat-value { color: var(--success); }
+        .stat-card.warning { background: #fef3c7; }
+        .stat-card.warning .stat-value { color: var(--warning); }
+
+        /* Action bar */
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: var(--space-md);
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state .title { font-size: 16px; font-weight: 500; color: var(--text-secondary); }
+        .empty-state .desc { font-size: 13px; margin-top: 8px; }
+
+        /* Tab content transitions */
+        .tab-section { margin-bottom: var(--space-md); }
+        .tab-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tab-section-title::before {
+            content: '';
+            width: 3px;
+            height: 14px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        /* Monthly goals input */
+        .goals-input-container {
+            position: relative;
+        }
+        .goals-input-container textarea {
+            min-height: 120px;
+        }
+
+        /* Plan edit area */
+        .plan-edit-area {
+            min-height: 300px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            background: #f8f9fa;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-header { padding: 14px 16px; }
+            .app-header h1 { font-size: 17px; }
+            .view { padding: 16px; }
+            .tab-btn { font-size: 13px; padding: 12px 8px; }
+            .stats-row { flex-direction: column; }
+            .profile-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Week select */
+        .week-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .week-btn {
+            padding: 6px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s;
+        }
+        .week-btn:hover { border-color: var(--primary); }
+        .week-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Plan type tabs */
+        .plan-type-tabs {
+            display: flex;
+            gap: 4px;
+            background: #f0f0f0;
+            border-radius: var(--radius-md);
+            padding: 4px;
+            margin-bottom: var(--space-md);
+        }
+        .plan-type-tab {
+            flex: 1;
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .plan-type-tab.active {
+            background: white;
+            color: var(--primary);
+            font-weight: 600;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Separator */
+        .separator { height: 1px; background: var(--border-light); margin: var(--space-md) 0; }
+
+        /* Hidden */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="app-header">
+    <div>
+        <h1>AI 计划助手</h1>
+        <div class="subtitle">学习你的风格，帮你做计划</div>
+    </div>
+    <div class="header-status" id="headerStatus">
+        <span class="dot off" id="apiDot"></span>
+        <span id="apiStatusText">未配置 API Key</span>
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tab-nav" id="tabNav">
+    <button class="tab-btn active" onclick="switchTab('upload')">📎 上传</button>
+    <button class="tab-btn" onclick="switchTab('plan')">📋 计划</button>
+    <button class="tab-btn" onclick="switchTab('analysis')">📊 分析</button>
+    <button class="tab-btn" onclick="switchTab('settings')">⚙️ 设置</button>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-box">
+        <div class="spinner"></div>
+        <div id="loadingText">正在处理...</div>
+    </div>
+</div>
+
+<!-- ==================== VIEW: Upload ==================== -->
+<div class="view active" id="view-upload">
+    <div class="card">
+        <div class="card-title">📎 上传历史计划</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">上传你之前做过的计划（文字或图片），AI 会分析你的计划风格，后续生成的计划将模仿你的习惯。</p>
+
+        <!-- Text input -->
+        <div class="tab-section">
+            <div class="tab-section-title">方式一：粘贴文字</div>
+            <textarea id="uploadTextArea" rows="8" placeholder="把你之前的计划直接粘贴在这里...&#10;&#10;例如：&#10;## 上午&#10;- 8:00-9:00 完成XX&#10;- 9:00-10:00 处理XX"></textarea>
+            <div class="action-bar">
+                <button class="btn btn-primary" onclick="uploadTextPlan()">上传文字计划</button>
+            </div>
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- File upload -->
+        <div class="tab-section">
+            <div class="tab-section-title">方式二：上传文件或粘贴图片</div>
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+                 ondragover="event.preventDefault();this.classList.add('dragover')"
+                 ondragleave="this.classList.remove('dragover')"
+                 ondrop="handleFileDrop(event)"
+                 tabindex="0">
+                <div class="icon">📄</div>
+                <div>点击上传、拖拽文件、或直接 Ctrl+V 粘贴截图</div>
+                <div class="hint">支持 .txt 文本文件、.jpg/.png 图片文件、剪贴板截图</div>
+            </div>
+            <input type="file" id="fileInput" accept=".txt,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleFileSelect(event)">
+        </div>
+    </div>
+
+    <!-- History list -->
+    <div class="card">
+        <div class="card-title">
+            📂 已上传的历史计划
+            <span class="badge badge-info" id="uploadCount">0 份</span>
+        </div>
+        <div id="historyList">
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <div class="title">还没有上传任何计划</div>
+                <div class="desc">上传你过去做的计划，AI 会学习你的风格</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Style Profile -->
+    <div class="card">
+        <div class="card-title">
+            🎨 风格画像
+            <span class="badge" id="profileConfBadge" style="display:none"></span>
+        </div>
+        <div id="styleProfileDisplay">
+            <div class="empty-state">
+                <div class="icon">🔍</div>
+                <div class="title">尚未分析风格</div>
+                <div class="desc">上传历史计划后，点击「分析风格」按钮</div>
+            </div>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="analyzeStyle()" id="btnAnalyzeStyle">🔍 分析风格</button>
+            <button class="btn btn-ghost" onclick="clearStyleProfile()">清除画像</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== VIEW: Plan ==================== -->
+<div class="view" id="view-plan">
+    <!-- Monthly Goals -->
+    <div class="card">
+        <div class="card-title">🎯 本月目标</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">输入你本月想达成的目标，AI 会根据目标和你的风格生成周计划和日计划。</p>
+        <div class="goals-input-container">
+            <textarea id="monthlyGoalsInput" rows="5" placeholder="输入你的月度目标...&#10;&#10;例如：&#10;1. 完成Q1营销方案&#10;2. 学完AI课程第10-16讲&#10;3. 读完《纳瓦尔宝典》&#10;4. 保持每天晨跑"></textarea>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="generatePlan()">✨ 生成计划</button>
+            <button class="btn btn-ghost" onclick="saveMonthlyGoals()">💾 保存目标</button>
+        </div>
+    </div>
+
+    <!-- Plan Type Tabs -->
+    <div class="card">
+        <div class="plan-type-tabs">
+            <button class="plan-type-tab active" onclick="switchPlanType('weekly')">📅 周计划</button>
+            <button class="plan-type-tab" onclick="switchPlanType('daily')">📝 日计划</button>
+        </div>
+
+        <!-- Weekly Plan -->
+        <div id="weeklyPlanSection">
+            <div class="card-title" style="margin-top:0">本周计划概览</div>
+            <div id="weeklyPlanContent">
+                <div class="empty-state">
+                    <div class="icon">📅</div>
+                    <div class="title">尚未生成周计划</div>
+                    <div class="desc">输入月目标后点击「生成计划」</div>
+                </div>
+            </div>
+            <div class="action-bar" id="weeklyActions" style="display:none">
+                <button class="btn btn-outline btn-sm" onclick="enterEditMode('weekly')">✏️ 编辑</button>
+            </div>
+        </div>
+
+        <!-- Daily Plan -->
+        <div id="dailyPlanSection" class="hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div class="date-nav">
+                    <button class="btn btn-ghost btn-sm" onclick="navigateDate(-1)">◀</button>
+                    <span class="current-date" id="currentDateLabel"></span>
+                    <button class="btn btn-ghost btn-sm" onclick="navigateDate(1)">▶</button>
+                </div>
+                <div id="dailyCompletionBadge"></div>
+            </div>
+            <div id="dailyPlanContent">
+                <div class="empty-state">
+                    <div class="icon">📝</div>
+                    <div class="title">今日计划尚未生成</div>
+                    <div class="desc">生成周计划后，日计划会同时生成</div>
+                </div>
+            </div>
+            <div class="action-bar" id="dailyActions" style="display:none">
+                <span style="font-size:12px;color:var(--text-muted);">双击任务可原地编辑，点击圆点标记完成</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== VIEW: Analysis ==================== -->
+<div class="view" id="view-analysis">
+    <!-- Stats -->
+    <div class="stats-row" id="analysisStats">
+        <div class="stat-card primary">
+            <div class="stat-value" id="statTotal">-</div>
+            <div class="stat-label">今日任务</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-value" id="statDone">-</div>
+            <div class="stat-label">已完成</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-value" id="statRate">-</div>
+            <div class="stat-label">完成率</div>
+        </div>
+    </div>
+
+    <!-- Daily Summary -->
+    <div class="card">
+        <div class="card-title">📊 今日总结</div>
+        <div id="dailySummaryContent">
+            <div class="empty-state">
+                <div class="icon">📊</div>
+                <div class="title">尚未生成今日总结</div>
+                <div class="desc">在日计划中勾选完成状态后，点击「生成总结」</div>
+            </div>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="generateDailySummary()">📊 生成今日总结</button>
+        </div>
+    </div>
+
+    <!-- Tomorrow Plan -->
+    <div class="card">
+        <div class="card-title">📝 明日计划预览</div>
+        <div id="tomorrowPlanContent">
+            <div class="empty-state">
+                <div class="icon">🌅</div>
+                <div class="title">明日计划将在总结后自动生成</div>
+                <div class="desc">完成今日总结后，AI 会自动预写明天的计划</div>
+            </div>
+        </div>
+        <div class="action-bar" id="tomorrowActions" style="display:none">
+            <button class="btn btn-success btn-sm" onclick="acceptTomorrowPlan()">✅ 接受计划</button>
+            <button class="btn btn-outline btn-sm" onclick="enterEditMode('tomorrow')">✏️ 修改后接受</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== VIEW: Settings ==================== -->
+<div class="view" id="view-settings">
+    <div class="card">
+        <div class="card-title">🔑 API 配置</div>
+        <div style="margin-bottom:16px;">
+            <label>OpenRouter API Key</label>
+            <input type="password" id="settingsApiKey" placeholder="sk-or-v1-xxxxxxxx">
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">你的 API Key 仅保存在本地浏览器中，不会上传到任何服务器。</div>
+        </div>
+        <div style="margin-bottom:16px;">
+            <label>AI 模型</label>
+            <select id="settingsModel" style="width:100%;">
+                <optgroup label="Google Gemini 系列">
+                    <option value="google/gemini-3-flash-preview">Gemini 3 Flash Preview — 推荐 · 快速便宜</option>
+                    <option value="google/gemini-3-pro-image-preview">Gemini 3 Pro Image Preview — 图片解析</option>
+                    <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro — 强推理能力</option>
+                    <option value="google/gemini-2.5-flash-preview">Gemini 2.5 Flash — 快速均衡</option>
+                    <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash — 稳定可靠</option>
+                </optgroup>
+                <optgroup label="OpenAI 系列">
+                    <option value="openai/gpt-5.2-chat">GPT-5.2 — 最强深度分析</option>
+                    <option value="openai/gpt-4.1">GPT-4.1 — 高质量通用</option>
+                    <option value="openai/gpt-4.1-mini">GPT-4.1 Mini — 快速高性价比</option>
+                    <option value="openai/gpt-4.1-nano">GPT-4.1 Nano — 极速轻量</option>
+                    <option value="openai/gpt-4o">GPT-4o — 多模态经典</option>
+                    <option value="openai/gpt-4o-mini">GPT-4o Mini — 经济实惠</option>
+                    <option value="openai/o3">o3 — 深度推理</option>
+                    <option value="openai/o3-mini">o3-Mini — 推理性价比</option>
+                    <option value="openai/o4-mini">o4-Mini — 最新推理</option>
+                </optgroup>
+                <optgroup label="Anthropic Claude 系列">
+                    <option value="anthropic/claude-sonnet-4">Claude Sonnet 4 — 最新高质量</option>
+                    <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet — 均衡全能</option>
+                    <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku — 快速经济</option>
+                    <option value="anthropic/claude-3-opus">Claude 3 Opus — 最强分析</option>
+                </optgroup>
+                <optgroup label="Meta Llama 系列">
+                    <option value="meta-llama/llama-4-maverick">Llama 4 Maverick — 最新开源</option>
+                    <option value="meta-llama/llama-4-scout">Llama 4 Scout — 长上下文</option>
+                    <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B — 稳定开源</option>
+                </optgroup>
+                <optgroup label="DeepSeek 系列">
+                    <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3 — 中文优秀</option>
+                    <option value="deepseek/deepseek-r1">DeepSeek R1 — 深度推理</option>
+                </optgroup>
+                <optgroup label="Qwen 通义千问系列">
+                    <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B — 中文能力强</option>
+                    <option value="qwen/qwq-32b">QwQ 32B — 推理思考</option>
+                </optgroup>
+                <optgroup label="Mistral 系列">
+                    <option value="mistralai/mistral-large-2411">Mistral Large — 高质量</option>
+                    <option value="mistralai/mistral-small-2503">Mistral Small — 轻快经济</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="saveApiConfig()">💾 保存配置</button>
+            <button class="btn btn-outline" onclick="testApiConnection()">🔗 测试连接</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📦 数据管理</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">所有数据保存在浏览器的 localStorage 中。你可以导出备份或清除数据。</p>
+        <div class="action-bar">
+            <button class="btn btn-outline" onclick="exportAllData()">📤 导出备份</button>
+            <button class="btn btn-outline" onclick="document.getElementById('importInput').click()">📥 导入数据</button>
+            <button class="btn btn-danger" onclick="clearAllData()">🗑️ 清除所有数据</button>
+        </div>
+        <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+
+    <div class="card">
+        <div class="card-title">ℹ️ 关于</div>
+        <p style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+            AI 计划助手 v1.0 — MVP 版本<br>
+            通过学习你的历史计划风格，自动生成符合个人习惯的日/周/月计划。<br>
+            5 层 Prompt 系统持续学习，越用越懂你。<br>
+            使用 OpenRouter API 调用大模型，支持多种模型选择。
+        </p>
+    </div>
+</div>
+
+<script>
+// ==================== Constants & State ====================
+const TABS = ['upload', 'plan', 'analysis', 'settings'];
+let currentDate = new Date();
+let editSnapshot = null;
+let apiLock = false;
+
+// ==================== Prompt Templates ====================
+const PROMPTS = {
+    STYLE_ANALYSIS: `你是一位经验丰富的个人效率顾问。用户会给你他们过去写的计划，请分析这个人的计划风格，输出一份简洁的「风格画像」JSON。
+
+重要原则：
+1. 每个字段只写最核心的判断，不要啰嗦，不要在不同字段里重复相似的描述
+2. 用大白话描述，像朋友聊天那样说人话，不要用学术化的术语
+3. 要有具体的判断，不要笼统的"中等""一般"，要给出你观察到的细节
+4. sample_expressions 要从原文里原样摘抄，不要改写
+
+各字段要求：
+- format: 一句话说明计划的排版结构（比如"按上午/下午/晚上分块，每块下面列任务"、"纯数字编号清单"、"按工作/学习/生活分类"）
+- granularity: 任务写得多细？（比如"精确到半小时时间段"、"只写个大概要干啥"、"有时间有细节有备注"）
+- time_preference: 这个人几点起几点睡？什么时间做重要的事？（比如"6点半起，重要事放上午8-10点"）
+- peak_hours: 把最难最重要的任务放在什么时段？直接写时段即可，跟 time_preference 不要重复
+- categories: 用户自己用的分类名，原样摘抄（如["上午","下午","晚上"] 或 ["工作","学习","生活"]）
+- priority_system: 怎么标记重要事项的？（比如"用【重要】+⭐星号"、"感叹号标注"、"没有特别标记"）
+- language_style: 写任务时的口吻（比如"动词开头的短句，像'完成XX''处理XX'"、"口语化完整句子"、"关键词打点"）
+- typical_daily_count: 一天安排几件事？写数字范围即可
+- buffer_habit: 任务之间有没有休息时间？直接写 true/false
+- recurring_items: 每天雷打不动会出现的事，原样摘抄（如["晨跑","午休","写日记"]）
+- weekend_pattern: 周末怎么安排的？一句话（如"大幅减少工作，主要看书休闲"、"跟工作日差不多"）
+- goal_linking: 任务有没有和大目标挂钩？true/false
+- completion_markers: 怎么标记做没做完？（如"用✅和❌"、"用[x]勾选"、"没有标记习惯"）
+- sample_expressions: 从原文里一字不改地摘抄5-8个最典型的表达方式
+- confidence: "high"/"medium"/"low"，取决于给的计划多不多、风格明不明显
+
+如果用户给的内容太少（比如就几行关键词），confidence 写 "low"，其他字段尽量猜但标注不确定。
+
+严格输出 JSON，不要输出其他任何内容。`,
+
+    PLAN_GENERATION: `你是用户的私人计划助手，同时也是一位善于思考的规划参谋。你需要严格按照用户的个人计划风格来生成计划。
+
+你会收到以下信息：
+1. 用户的「风格画像」（JSON 格式）—— 描述了用户写计划的习惯和偏好
+2. 用户的「历史计划示例」—— 作为风格参考，你生成的计划要看起来和这些示例属于同一个人写的
+3. 用户的「本月目标」—— 需要被拆解为具体的周计划和日计划
+
+你必须具备目标拆解的思考能力：
+- 先理解用户的最终目标是什么，而非机械拆分文字
+- 分析目标之间的依赖关系和先后顺序
+- 评估每个目标的难度和所需时间，合理分配到不同的周
+- 判断推进节奏：前期密集还是均匀分布，是否需要留出缓冲
+- 结合用户的行为风格（精力高峰、擅长的工作方式）来调整方案
+- 确保月底回看时，目标是可以达成的
+
+生成要求：
+1. 【格式一致】生成的计划在格式、排版、结构上必须与用户示例保持高度一致
+2. 【措辞模仿】使用用户惯用的表达方式和措辞风格（参考 sample_expressions）
+3. 【时间合理】重要任务安排在用户偏好的高效时段（参考 peak_hours）
+4. 【包含重复项】自动加入用户的固定重复事项（参考 recurring_items）
+5. 【控制总量】每日任务数量控制在用户习惯范围内（参考 typical_daily_count）
+6. 【目标拆解】将月目标智能拆解分配到每周、每天，确保月底可完成
+7. 【可执行性】每个任务必须具体、可执行，避免模糊描述
+8. 【完成标记】使用用户惯用的完成标记方式（参考 completion_markers）
+
+请先输出 "## 本周计划" 然后输出本周的周计划概览，接着输出 "## 今日计划" 然后输出今天的详细日计划。用 "---" 分隔两部分。`,
+
+    MODIFICATION_LEARNING: `你是一位行为模式分析师。用户对 AI 生成的计划进行了手动修改，请分析这些修改行为，从中学习用户的真实偏好。
+
+你会收到：
+1. AI 生成的「原始计划」
+2. 用户修改后的「最终计划」
+3. 当前的「风格画像」
+
+请分析以下内容并以 JSON 输出：
+
+{
+  "modifications": {
+    "added": ["用户新增了哪些任务或内容"],
+    "removed": ["用户删除了哪些任务"],
+    "time_changes": ["用户调整了哪些任务的时间"],
+    "wording_changes": ["用户修改了哪些措辞"],
+    "priority_changes": ["用户调整了哪些任务的优先级或顺序"]
+  },
+  "insights": [
+    "从这些修改中得到的3-5条关于用户偏好的洞察"
+  ],
+  "style_profile_updates": {
+    "需要更新的画像字段": "建议的新值（仅列出需要修改的字段）"
+  },
+  "confidence": "对这些洞察的置信度（high/medium/low），以及原因"
+}
+
+注意：
+- 要区分「偶然的一次性调整」和「反映深层偏好的系统性修改」
+- 如果修改很少，说明AI生成的质量很好，不需要大幅更新画像
+- 输出严格 JSON 格式`,
+
+    DAILY_SUMMARY: `你是用户的私人效率教练。请分析用户今天的计划执行情况，给出有价值的反馈。
+
+你会收到：
+1. 今天的计划（含每项任务的完成状态）
+2. 用户对计划的修改记录（如有）
+3. 用户近期的完成率趋势（如有）
+
+请按以下结构输出分析报告（使用 Markdown 格式，语气亲切但专业）：
+
+## 📊 今日执行报告
+
+### 完成概览
+- 总任务数、已完成数、完成率
+- 与近期平均完成率的对比
+
+### 做得好的地方 ✨
+- 具体表扬完成的重要任务
+- 肯定用户的努力和进步
+
+### 未完成事项分析 🔍
+- 列出未完成的任务
+- 分析每项未完成的可能原因
+- 如果某类任务反复未完成，指出这个模式
+
+### 改进建议 💡
+- 针对今天的情况给出2-3条具体、可执行的建议
+- 不要空话套话，要结合实际情况
+
+### 需要顺延的事项 ➡️
+- 列出建议顺延到明天的任务
+- 建议调整后的优先级
+
+注意：
+- 语气要像一个理解你的朋友，不要说教
+- 建议要具体可执行，不要泛泛而谈
+- 如果完成率很高，多鼓励；如果很低，要分析原因而不是批评`,
+
+    TOMORROW_PLAN: `你是用户的私人计划助手。基于今日的执行情况和总结，生成明天的计划。
+
+你会收到：
+1. 用户的「风格画像」
+2. 本周剩余未完成的目标任务
+3. 今日未完成需要顺延的事项
+4. 今日用户对计划的修改行为（AI 从中学到了什么）
+5. 用户的历史计划示例（风格参考）
+
+生成要求：
+1. 【风格一致】格式、措辞、结构严格匹配用户风格画像和历史示例
+2. 【顺延整合】未完成的重要事项自然融入明日计划，适当调整优先级
+3. 【修改学习】体现从今日用户修改中学到的偏好变化：
+   - 如果用户今天把某类任务移到了不同时段，明天就安排在新时段
+   - 如果用户删除了某类任务，明天考虑减少类似安排
+   - 如果用户新增了某类任务，明天考虑加入
+4. 【合理负载】基于用户最近的实际完成能力安排任务量：
+   - 如果近期完成率低于 70%，适当减少任务数量
+   - 如果近期完成率高于 90%，可以适度增加挑战
+5. 【目标推进】确保周目标仍在按计划推进，如果落后要调整节奏
+
+直接输出明日计划（匹配用户风格），不需要解释生成逻辑。`
+};
+
+// ==================== Default Style Profile ====================
+const DEFAULT_STYLE_PROFILE = {
+    format: '时间块分段',
+    granularity: '中等',
+    time_preference: '均衡型',
+    peak_hours: '9:00-12:00',
+    categories: ['工作', '学习', '生活'],
+    priority_system: '无特殊标记',
+    language_style: '简洁短语',
+    typical_daily_count: '8-12',
+    buffer_habit: true,
+    recurring_items: [],
+    weekend_pattern: '大幅减少',
+    goal_linking: false,
+    completion_markers: 'checkbox',
+    sample_expressions: [],
+    confidence: 'low'
+};
+
+// ==================== Utility Functions ====================
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+
+function formatDateCN(date) {
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    return `${date.getFullYear()}年${date.getMonth()+1}月${date.getDate()}日 周${days[date.getDay()]}`;
+}
+
+function getDayOfWeek() {
+    return ['日', '一', '二', '三', '四', '五', '六'][new Date().getDay()];
+}
+
+function getCurrentWeekNumber() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = now - start;
+    return Math.ceil((diff / 86400000 + start.getDay() + 1) / 7);
+}
+
+function getWeekKey(date) {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const week = getCurrentWeekNumber();
+    return `${year}-W${String(week).padStart(2, '0')}`;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function debounce(fn, ms) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), ms);
+    };
+}
+
+// ==================== Storage ====================
+function saveData(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+            cleanOldData();
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch { return false; }
+        }
+        return false;
+    }
+}
+
+function loadData(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
+
+function cleanOldData() {
+    const cutoff = Date.now() - 60 * 24 * 60 * 60 * 1000;
+    ['planai_daily_plans', 'planai_summaries'].forEach(key => {
+        const data = loadData(key) || {};
+        for (const date in data) {
+            if (data[date].timestamp < cutoff) delete data[date];
+        }
+        saveData(key, data);
+    });
+}
+
+// ==================== Toast ====================
+function showToast(message, type = 'info', duration = 3000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+// ==================== Loading ====================
+function showLoading(text = '正在处理...') {
+    document.getElementById('loadingText').textContent = text;
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+// ==================== Tab Navigation ====================
+function switchTab(tabId) {
+    TABS.forEach(id => {
+        const btn = document.querySelector(`#tabNav .tab-btn:nth-child(${TABS.indexOf(id) + 1})`);
+        btn.classList.toggle('active', id === tabId);
+        document.getElementById(`view-${id}`).classList.toggle('active', id === tabId);
+    });
+    saveData('planai_active_tab', tabId);
+    if (tabId === 'plan') {
+        updateDateLabel();
+        refreshDailyPlan();
+    }
+    if (tabId === 'analysis') {
+        refreshAnalysisStats();
+    }
+}
+
+// ==================== OpenRouter API ====================
+async function callOpenRouter(messages, options = {}) {
+    const config = loadData('planai_api_config') || {};
+    const apiKey = options.apiKey || config.apiKey;
+    const model = options.model || config.model || 'google/gemini-3-flash-preview';
+
+    if (!apiKey) {
+        throw new Error('请先在设置中配置 OpenRouter API Key');
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.href,
+            'X-Title': 'AI Plan Assistant'
+        },
+        body: JSON.stringify({
+            model: model,
+            messages: messages,
+            temperature: options.temperature || 0.7,
+            max_tokens: options.maxTokens || 4096
+        })
+    });
+
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || `API 请求失败 (${response.status})`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+async function callWithRetry(messages, options = {}, maxRetries = 2) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await callOpenRouter(messages, options);
+        } catch (error) {
+            if (attempt === maxRetries) throw error;
+            if (error.message.includes('429')) {
+                await sleep(2000 * (attempt + 1));
+                continue;
+            }
+            throw error;
+        }
+    }
+}
+
+async function withApiLock(fn) {
+    if (apiLock) {
+        showToast('正在处理上一个请求，请稍候', 'warning');
+        return;
+    }
+    apiLock = true;
+    try {
+        return await fn();
+    } finally {
+        apiLock = false;
+    }
+}
+
+// ==================== JSON Parser ====================
+function extractJSON(text) {
+    try { return JSON.parse(text); } catch {}
+
+    const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+        try { return JSON.parse(codeBlockMatch[1].trim()); } catch {}
+    }
+
+    const braceMatch = text.match(/\{[\s\S]*\}/);
+    if (braceMatch) {
+        try { return JSON.parse(braceMatch[0]); } catch {}
+    }
+
+    throw new Error('无法从 AI 响应中提取有效的 JSON');
+}
+
+// ==================== Markdown Renderer ====================
+function renderMarkdown(md) {
+    if (!md) return '';
+    return md
+        .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^[-*] (.*$)/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/gm, (m) => m)
+        .replace(/((?:<li>.*<\/li>\s*)+)/gm, '<ul>$1</ul>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+}
+
+// ==================== Plan Parsing & Rendering ====================
+function parsePlanText(planText, completionMarker) {
+    if (!planText) return [];
+    const lines = planText.split('\n');
+    const sections = [];
+    let currentSection = { title: '', items: [] };
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === '---') continue;
+
+        if (trimmed.startsWith('## ') || trimmed.startsWith('### ')) {
+            if (currentSection.title || currentSection.items.length) {
+                sections.push(currentSection);
+            }
+            currentSection = { title: trimmed.replace(/^#+\s*/, ''), items: [] };
+        } else if (trimmed.match(/^[-*]\s/)) {
+            const rawText = trimmed.replace(/^[-*]\s/, '');
+            const cleanText = stripCompletionMarkers(rawText);
+            currentSection.items.push({
+                id: generateId(),
+                text: cleanText,
+                completed: isMarkedComplete(trimmed, completionMarker),
+                raw: line
+            });
+        } else {
+            currentSection.items.push({
+                id: generateId(),
+                text: trimmed,
+                completed: false,
+                isPlainText: true,
+                raw: line
+            });
+        }
+    }
+    if (currentSection.title || currentSection.items.length) {
+        sections.push(currentSection);
+    }
+    return sections;
+}
+
+function isMarkedComplete(line, completionMarker) {
+    if (!completionMarker) return false;
+    const patterns = {
+        'checkbox': /\[x\]/i,
+        'emoji_check': /[✅☑✓]/,
+        'emoji_cross': /❌/,
+        'strikethrough': /~~.+~~/,
+        'text_done': /已完成|done|完成/i,
+        'default': /[✅☑✓]|\[x\]/i
+    };
+    const pattern = patterns[completionMarker] || patterns['default'];
+    return pattern.test(line);
+}
+
+function stripCompletionMarkers(text) {
+    return text
+        .replace(/^[✅❌☑✓⬜◻️◼️🔲🔳\[\]x]\s*/gi, '')
+        .replace(/^\[[ x]\]\s*/i, '')
+        .replace(/^~~(.+)~~$/, '$1')
+        .trim();
+}
+
+function sanitizeSections(sections) {
+    if (!sections) return sections;
+    const markerRe = /^[✅❌☑✓⬜]/;
+    const taskLikeRe = /\d{1,2}[:\-点]\d{0,2}|（|完成|学习|阅读|处理|开始|准备|运动|打卡/;
+    sections.forEach(section => {
+        section.items.forEach(item => {
+            const hadMarker = markerRe.test(item.text);
+            item.text = stripCompletionMarkers(item.text);
+            if (item.isPlainText && hadMarker) {
+                item.isPlainText = false;
+                item.completed = true;
+                if (!item.id) item.id = generateId();
+            }
+            if (item.isPlainText && taskLikeRe.test(item.text) && !item.text.startsWith('**') && item.text.length < 100) {
+                item.isPlainText = false;
+                if (!item.id) item.id = generateId();
+            }
+        });
+    });
+    return sections;
+}
+
+function renderPlan(sections, containerId) {
+    const container = document.getElementById(containerId);
+    if (!sections || sections.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📝</div><div class="title">暂无计划内容</div></div>';
+        return;
+    }
+
+    let html = '<div class="plan-container">';
+    sections.forEach((section, si) => {
+        if (section.title) {
+            html += `<div class="plan-section-title" data-si="${si}" ondblclick="inlineEditTitle(this)">${section.title}</div>`;
+        }
+        section.items.forEach((item, ii) => {
+            if (item.isPlainText) {
+                html += `<div class="plan-text-line" data-si="${si}" data-ii="${ii}" ondblclick="inlineEditText(this)">${item.text}</div>`;
+            } else {
+                html += `
+                    <div class="plan-item ${item.completed ? 'completed' : ''}" data-id="${item.id}" data-si="${si}" data-ii="${ii}">
+                        <span class="toggle-done" onclick="toggleTaskComplete('${item.id}', !${item.completed})">✓</span>
+                        <span class="plan-item-text" ondblclick="inlineEditTask(this)">${item.text}</span>
+                        <span class="item-delete" onclick="deleteTask('${item.id}')" title="删除">×</span>
+                    </div>`;
+            }
+        });
+        html += `<div class="add-task-btn" onclick="addNewTask(${si})">+ 添加任务</div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function sectionsToText(sections) {
+    let text = '';
+    sections.forEach(section => {
+        if (section.title) text += `## ${section.title}\n`;
+        section.items.forEach(item => {
+            if (item.isPlainText) {
+                text += `${item.text}\n`;
+            } else {
+                text += `- ${item.text}\n`;
+            }
+        });
+        text += '\n';
+    });
+    return text.trim();
+}
+
+// ==================== Task Completion ====================
+function toggleTaskComplete(taskId, checked) {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+    if (!dayPlan) return;
+
+    if (!dayPlan.completionStatus) dayPlan.completionStatus = {};
+    dayPlan.completionStatus[taskId] = checked;
+
+    if (dayPlan.sections) {
+        dayPlan.sections.forEach(section => {
+            section.items.forEach(item => {
+                if (item.id === taskId) item.completed = checked;
+            });
+        });
+    }
+
+    dailyPlans[dateKey] = dayPlan;
+    saveData('planai_daily_plans', dailyPlans);
+
+    const planItem = document.querySelector(`.plan-item[data-id="${taskId}"]`);
+    if (planItem) {
+        planItem.classList.toggle('completed', checked);
+    }
+    updateDailyCompletionBadge(dayPlan.sections);
+    refreshAnalysisStats();
+}
+
+function updateDailyCompletionBadge(sections) {
+    const badge = document.getElementById('dailyCompletionBadge');
+    if (!sections) { badge.innerHTML = ''; return; }
+
+    const stats = calculateCompletionStats(sections);
+    const badgeClass = stats.rate >= 80 ? 'badge-success' : stats.rate >= 50 ? 'badge-warning' : 'badge-danger';
+    badge.innerHTML = `<span class="badge ${badgeClass}">${stats.completed}/${stats.total} 完成率 ${stats.rate}%</span>`;
+}
+
+function calculateCompletionStats(planSections) {
+    let total = 0, completed = 0;
+    if (!planSections) return { total: 0, completed: 0, rate: 0 };
+    planSections.forEach(section => {
+        section.items.forEach(item => {
+            if (!item.isPlainText) {
+                total++;
+                if (item.completed) completed++;
+            }
+        });
+    });
+    return { total, completed, rate: total > 0 ? Math.round((completed / total) * 100) : 0 };
+}
+
+// ==================== Edit Mode ====================
+function enterEditMode(planType) {
+    let containerId, currentText, sections;
+    if (planType === 'weekly') {
+        containerId = 'weeklyPlanContent';
+        const weekKey = getWeekKey(currentDate);
+        const weeklyPlans = loadData('planai_weekly_plans') || {};
+        currentText = weeklyPlans[weekKey]?.content || '';
+    } else if (planType === 'daily') {
+        containerId = 'dailyPlanContent';
+        const dateKey = formatDate(currentDate);
+        const dailyPlans = loadData('planai_daily_plans') || {};
+        const dayPlan = dailyPlans[dateKey];
+        currentText = dayPlan ? (dayPlan.current || dayPlan.original || '') : '';
+    } else if (planType === 'tomorrow') {
+        containerId = 'tomorrowPlanContent';
+        const tomorrowDate = new Date(currentDate);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const dateKey = formatDate(tomorrowDate);
+        const dailyPlans = loadData('planai_daily_plans') || {};
+        currentText = dailyPlans[dateKey]?.original || '';
+    }
+
+    editSnapshot = currentText;
+    const container = document.getElementById(containerId);
+    container.innerHTML = `
+        <textarea class="plan-edit-area" id="${planType}-edit-textarea">${currentText}</textarea>
+        <div class="action-bar" style="margin-top:12px">
+            <button class="btn btn-success btn-sm" onclick="saveEdit('${planType}')">💾 保存</button>
+            <button class="btn btn-ghost btn-sm" onclick="cancelEdit('${planType}')">取消</button>
+        </div>`;
+}
+
+function saveEdit(planType) {
+    const textarea = document.getElementById(`${planType}-edit-textarea`);
+    if (!textarea) return;
+    const newText = textarea.value;
+
+    if (planType === 'weekly') {
+        const weekKey = getWeekKey(currentDate);
+        const weeklyPlans = loadData('planai_weekly_plans') || {};
+        weeklyPlans[weekKey] = { content: newText, timestamp: Date.now() };
+        saveData('planai_weekly_plans', weeklyPlans);
+        renderWeeklyPlan(newText);
+    } else if (planType === 'daily') {
+        const dateKey = formatDate(currentDate);
+        const dailyPlans = loadData('planai_daily_plans') || {};
+        const dayPlan = dailyPlans[dateKey] || {};
+
+        if (editSnapshot && editSnapshot !== newText) {
+            const diff = detectModifications(editSnapshot, newText);
+            saveModification(dateKey, diff);
+            triggerModificationLearning(editSnapshot, newText);
+        }
+
+        const profile = getEffectiveProfile(loadData('planai_style_profile'));
+        const sections = parsePlanText(newText, profile.completion_markers);
+        if (dayPlan.completionStatus) {
+            sections.forEach(section => {
+                section.items.forEach(item => {
+                    if (dayPlan.completionStatus[item.id] !== undefined) {
+                        item.completed = dayPlan.completionStatus[item.id];
+                    }
+                });
+            });
+        }
+        dayPlan.current = newText;
+        dayPlan.sections = sections;
+        dayPlan.timestamp = Date.now();
+        dailyPlans[dateKey] = dayPlan;
+        saveData('planai_daily_plans', dailyPlans);
+        renderPlan(sections, 'dailyPlanContent');
+        updateDailyCompletionBadge(sections);
+        document.getElementById('dailyActions').style.display = 'flex';
+        showToast('日计划已保存', 'success');
+    } else if (planType === 'tomorrow') {
+        const tomorrowDate = new Date(currentDate);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const dateKey = formatDate(tomorrowDate);
+        const dailyPlans = loadData('planai_daily_plans') || {};
+        dailyPlans[dateKey] = {
+            original: newText,
+            current: newText,
+            sections: parsePlanText(newText),
+            completionStatus: {},
+            timestamp: Date.now()
+        };
+        saveData('planai_daily_plans', dailyPlans);
+        showToast('明日计划已修改并保存', 'success');
+        document.getElementById('tomorrowPlanContent').innerHTML = `<div class="summary-content">${renderMarkdown(newText)}</div>`;
+    }
+}
+
+function cancelEdit(planType) {
+    if (planType === 'weekly') {
+        const weekKey = getWeekKey(currentDate);
+        const weeklyPlans = loadData('planai_weekly_plans') || {};
+        renderWeeklyPlan(weeklyPlans[weekKey]?.content || '');
+    } else if (planType === 'daily') {
+        refreshDailyPlan();
+    } else if (planType === 'tomorrow') {
+        const tomorrowDate = new Date(currentDate);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const dateKey = formatDate(tomorrowDate);
+        const dailyPlans = loadData('planai_daily_plans') || {};
+        const text = dailyPlans[dateKey]?.original || '';
+        document.getElementById('tomorrowPlanContent').innerHTML = `<div class="summary-content">${renderMarkdown(text)}</div>`;
+    }
+}
+
+// ==================== Modification Detection ====================
+function detectModifications(original, modified) {
+    const origLines = original.split('\n').filter(l => l.trim());
+    const modLines = modified.split('\n').filter(l => l.trim());
+    const origSet = new Set(origLines);
+    const modSet = new Set(modLines);
+
+    return {
+        added: modLines.filter(l => !origSet.has(l)),
+        removed: origLines.filter(l => !modSet.has(l)),
+        unchanged: origLines.filter(l => modSet.has(l)),
+        original, modified,
+        timestamp: Date.now(),
+        changeRatio: 1 - (origLines.filter(l => modSet.has(l)).length / Math.max(origLines.length, 1))
+    };
+}
+
+function saveModification(planDate, diff) {
+    const history = loadData('planai_modification_history') || [];
+    history.push({ date: planDate, diff, timestamp: Date.now() });
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const trimmed = history.filter(h => h.timestamp > cutoff);
+    saveData('planai_modification_history', trimmed);
+}
+
+// ==================== Style Profile ====================
+function mergeStyleProfiles(existing, newProfile) {
+    if (!existing) return newProfile;
+    const merged = { ...existing };
+
+    const stringFields = ['format', 'granularity', 'time_preference', 'language_style', 'weekend_pattern', 'completion_markers'];
+    for (const field of stringFields) {
+        if (newProfile[field] && newProfile.confidence !== 'low') {
+            merged[field] = newProfile[field];
+        }
+    }
+
+    const arrayFields = ['categories', 'recurring_items', 'sample_expressions'];
+    for (const field of arrayFields) {
+        if (newProfile[field]) {
+            const combined = [...(existing[field] || []), ...newProfile[field]];
+            merged[field] = [...new Set(combined)];
+        }
+    }
+
+    if (newProfile.typical_daily_count) merged.typical_daily_count = newProfile.typical_daily_count;
+    if (newProfile.peak_hours) merged.peak_hours = newProfile.peak_hours;
+    if (newProfile.priority_system) merged.priority_system = newProfile.priority_system;
+
+    const boolFields = ['buffer_habit', 'goal_linking'];
+    for (const field of boolFields) {
+        if (newProfile[field] !== undefined) merged[field] = newProfile[field];
+    }
+
+    const confLevels = { low: 1, medium: 2, high: 3 };
+    merged.confidence = (confLevels[newProfile.confidence] || 0) > (confLevels[existing.confidence] || 0)
+        ? newProfile.confidence : existing.confidence;
+    merged._lastUpdated = Date.now();
+    merged._updateCount = (existing._updateCount || 1) + 1;
+
+    return merged;
+}
+
+function getEffectiveProfile(storedProfile) {
+    if (!storedProfile || storedProfile.confidence === 'low') {
+        return { ...DEFAULT_STYLE_PROFILE, ...(storedProfile || {}) };
+    }
+    return storedProfile;
+}
+
+function applyProfileUpdates(currentProfile, updates) {
+    if (!updates || !updates.style_profile_updates) return currentProfile;
+    const updatedProfile = { ...currentProfile };
+    const suggestions = updates.style_profile_updates;
+
+    for (const [field, newValue] of Object.entries(suggestions)) {
+        if (field in updatedProfile) {
+            if (Array.isArray(updatedProfile[field]) && Array.isArray(newValue)) {
+                updatedProfile[field] = [...new Set([...updatedProfile[field], ...newValue])];
+            } else {
+                updatedProfile[field] = newValue;
+            }
+        }
+    }
+    updatedProfile._lastUpdated = Date.now();
+    return updatedProfile;
+}
+
+function displayStyleProfile(profile) {
+    const container = document.getElementById('styleProfileDisplay');
+    if (!profile) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><div class="title">尚未分析风格</div></div>';
+        return;
+    }
+
+    const displayFields = [
+        { key: 'format', label: '计划怎么排版' },
+        { key: 'granularity', label: '写得多细' },
+        { key: 'time_preference', label: '作息规律' },
+        { key: 'peak_hours', label: '黄金时段' },
+        { key: 'categories', label: '分类方式' },
+        { key: 'priority_system', label: '重点标记' },
+        { key: 'language_style', label: '写法口吻' },
+        { key: 'typical_daily_count', label: '每天几件事' },
+        { key: 'buffer_habit', label: '有没有休息' },
+        { key: 'recurring_items', label: '每天固定做的' },
+        { key: 'weekend_pattern', label: '周末怎么过' },
+        { key: 'completion_markers', label: '完成怎么标' },
+        { key: 'sample_expressions', label: '你的口头禅' },
+        { key: 'confidence', label: '分析把握度' }
+    ];
+
+    let html = '<div class="profile-grid">';
+    displayFields.forEach(f => {
+        let value = profile[f.key];
+        if (Array.isArray(value)) value = value.join('、') || '无';
+        if (typeof value === 'boolean') value = value ? '是' : '否';
+        if (value === undefined || value === null) value = '未知';
+        html += `
+            <div class="profile-field">
+                <div class="field-name">${f.label}</div>
+                <div class="field-value">${value}</div>
+            </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    const confBadge = document.getElementById('profileConfBadge');
+    confBadge.style.display = 'inline-block';
+    if (profile.confidence === 'high') {
+        confBadge.className = 'badge badge-success';
+        confBadge.textContent = '高置信度';
+    } else if (profile.confidence === 'medium') {
+        confBadge.className = 'badge badge-warning';
+        confBadge.textContent = '中置信度';
+    } else {
+        confBadge.className = 'badge badge-danger';
+        confBadge.textContent = '低置信度（使用兜底风格）';
+    }
+}
+
+// ==================== Completion Trend ====================
+function getCompletionTrend(days = 7) {
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const today = new Date();
+    const trend = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const key = formatDate(date);
+        if (dailyPlans[key] && dailyPlans[key].sections) {
+            const stats = calculateCompletionStats(dailyPlans[key].sections);
+            trend.push({ date: key, ...stats });
+        }
+    }
+
+    return {
+        data: trend,
+        averageRate: trend.length > 0
+            ? Math.round(trend.reduce((s, d) => s + d.rate, 0) / trend.length) : null
+    };
+}
+
+function formatCompletionTrend(trend) {
+    if (!trend.data.length) return '暂无历史数据';
+    return trend.data.map(d => `${d.date}: ${d.completed}/${d.total} (${d.rate}%)`).join('\n');
+}
+
+// ==================== Upload Functions ====================
+function uploadTextPlan() {
+    const text = document.getElementById('uploadTextArea').value.trim();
+    if (!text) { showToast('请输入计划内容', 'warning'); return; }
+
+    const plans = loadData('planai_uploaded_plans') || [];
+    plans.push({
+        id: generateId(),
+        name: `文字计划 ${new Date().toLocaleDateString('zh-CN')}`,
+        type: 'text',
+        content: text,
+        timestamp: Date.now()
+    });
+    saveData('planai_uploaded_plans', plans);
+    document.getElementById('uploadTextArea').value = '';
+    renderHistoryList();
+    showToast('计划已上传', 'success');
+}
+
+async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    await processFile(file);
+    event.target.value = '';
+}
+
+async function handleFileDrop(event) {
+    event.preventDefault();
+    event.target.classList.remove('dragover');
+    const file = event.dataTransfer.files[0];
+    if (file) await processFile(file);
+}
+
+async function processFile(file) {
+    const plans = loadData('planai_uploaded_plans') || [];
+
+    if (file.name.endsWith('.txt')) {
+        const text = await file.text();
+        plans.push({
+            id: generateId(),
+            name: file.name,
+            type: 'text',
+            content: text,
+            timestamp: Date.now()
+        });
+        saveData('planai_uploaded_plans', plans);
+        renderHistoryList();
+        showToast(`已上传: ${file.name}`, 'success');
+    } else if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target.result;
+            plans.push({
+                id: generateId(),
+                name: file.name,
+                type: 'image',
+                content: base64,
+                mimeType: file.type,
+                timestamp: Date.now()
+            });
+            saveData('planai_uploaded_plans', plans);
+            renderHistoryList();
+            showToast(`已上传图片: ${file.name}`, 'success');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        showToast('不支持的文件格式', 'error');
+    }
+}
+
+function renderHistoryList() {
+    const plans = loadData('planai_uploaded_plans') || [];
+    const container = document.getElementById('historyList');
+    document.getElementById('uploadCount').textContent = `${plans.length} 份`;
+
+    if (plans.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div class="title">还没有上传任何计划</div></div>';
+        return;
+    }
+
+    container.innerHTML = plans.map(p => `
+        <div class="history-item">
+            <div class="info">
+                <div class="name">${p.type === 'image' ? '🖼️' : '📄'} ${p.name}</div>
+                <div class="meta">${new Date(p.timestamp).toLocaleString('zh-CN')} · ${p.type === 'text' ? `${p.content.length} 字` : '图片'}</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-ghost btn-sm" onclick="viewPlan('${p.id}')">查看</button>
+                <button class="btn btn-ghost btn-sm" onclick="deletePlan('${p.id}')" style="color:var(--danger)">删除</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function viewPlan(planId) {
+    const plans = loadData('planai_uploaded_plans') || [];
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+
+    if (plan.type === 'image') {
+        const win = window.open('', '_blank');
+        win.document.write(`<img src="${plan.content}" style="max-width:100%">`);
+    } else {
+        const win = window.open('', '_blank');
+        win.document.write(`<pre style="padding:24px;font-family:inherit;white-space:pre-wrap;max-width:800px;margin:0 auto;">${plan.content}</pre>`);
+    }
+}
+
+function deletePlan(planId) {
+    if (!confirm('确定要删除这份历史计划吗？')) return;
+    let plans = loadData('planai_uploaded_plans') || [];
+    plans = plans.filter(p => p.id !== planId);
+    saveData('planai_uploaded_plans', plans);
+    renderHistoryList();
+    showToast('已删除', 'info');
+}
+
+// ==================== Style Analysis (Prompt 1) ====================
+async function analyzeStyle() {
+    const plans = loadData('planai_uploaded_plans') || [];
+    if (plans.length === 0) {
+        showToast('请先上传历史计划', 'warning');
+        return;
+    }
+
+    await withApiLock(async () => {
+        showLoading('正在分析你的计划风格...');
+        try {
+            const textPlans = plans.filter(p => p.type === 'text').map(p => p.content);
+            if (textPlans.length === 0) {
+                hideLoading();
+                showToast('目前仅支持分析文字计划，请上传文字格式的历史计划', 'warning');
+                return;
+            }
+
+            const combinedText = textPlans.join('\n\n---\n\n');
+            const messages = [
+                { role: 'system', content: PROMPTS.STYLE_ANALYSIS },
+                { role: 'user', content: `以下是我过去的计划：\n\n${combinedText}` }
+            ];
+
+            const result = await callWithRetry(messages, { temperature: 0.3 });
+            const newProfile = extractJSON(result);
+            const existingProfile = loadData('planai_style_profile');
+            const merged = mergeStyleProfiles(existingProfile, newProfile);
+            saveData('planai_style_profile', merged);
+            displayStyleProfile(merged);
+            hideLoading();
+            showToast('风格分析完成！', 'success');
+        } catch (error) {
+            hideLoading();
+            showToast(`风格分析失败: ${error.message}`, 'error');
+        }
+    });
+}
+
+function clearStyleProfile() {
+    if (!confirm('确定要清除风格画像吗？这将重置 AI 对你的风格学习。')) return;
+    localStorage.removeItem('planai_style_profile');
+    displayStyleProfile(null);
+    document.getElementById('profileConfBadge').style.display = 'none';
+    showToast('风格画像已清除', 'info');
+}
+
+// ==================== Plan Generation (Prompt 2) ====================
+async function generatePlan() {
+    const monthlyGoals = document.getElementById('monthlyGoalsInput').value.trim();
+    if (!monthlyGoals) {
+        showToast('请先输入本月目标', 'warning');
+        return;
+    }
+
+    saveMonthlyGoals();
+
+    await withApiLock(async () => {
+        showLoading('AI 正在思考目标拆解策略，生成计划中...');
+        try {
+            const profile = getEffectiveProfile(loadData('planai_style_profile'));
+            const plans = loadData('planai_uploaded_plans') || [];
+            const historySample = plans.filter(p => p.type === 'text').slice(-1).map(p => p.content).join('\n') || '';
+
+            const messages = [
+                { role: 'system', content: PROMPTS.PLAN_GENERATION },
+                { role: 'user', content: [
+                    `【风格画像】\n${JSON.stringify(profile, null, 2)}`,
+                    `\n【本月目标】\n${monthlyGoals}`,
+                    `\n【本周是第${getCurrentWeekNumber()}周，今天是周${getDayOfWeek()}，日期是${formatDate(new Date())}】`,
+                    historySample ? `\n【历史计划示例（风格参考）】\n${historySample}` : ''
+                ].join('\n') }
+            ];
+
+            const result = await callWithRetry(messages, { maxTokens: 8192 });
+
+            const parts = result.split(/---|\n(?=## 今日计划)/);
+            let weeklyText = '', dailyText = '';
+
+            if (parts.length >= 2) {
+                weeklyText = parts[0].trim();
+                dailyText = parts.slice(1).join('\n').trim();
+            } else {
+                const weeklyMatch = result.match(/## 本周计划[\s\S]*?(?=## 今日计划|$)/);
+                const dailyMatch = result.match(/## 今日计划[\s\S]*/);
+                weeklyText = weeklyMatch ? weeklyMatch[0].trim() : '';
+                dailyText = dailyMatch ? dailyMatch[0].trim() : result.trim();
+            }
+
+            if (!weeklyText && !dailyText) {
+                weeklyText = result.trim();
+                dailyText = result.trim();
+            }
+
+            const weekKey = getWeekKey(currentDate);
+            const weeklyPlans = loadData('planai_weekly_plans') || {};
+            weeklyPlans[weekKey] = { content: weeklyText, monthRef: formatDate(currentDate).substring(0, 7), timestamp: Date.now() };
+            saveData('planai_weekly_plans', weeklyPlans);
+
+            const dateKey = formatDate(currentDate);
+            const dailyPlans = loadData('planai_daily_plans') || {};
+            const sections = parsePlanText(dailyText, profile.completion_markers);
+            dailyPlans[dateKey] = {
+                original: dailyText,
+                current: dailyText,
+                sections: sections,
+                completionStatus: {},
+                timestamp: Date.now()
+            };
+            saveData('planai_daily_plans', dailyPlans);
+
+            renderWeeklyPlan(weeklyText);
+            renderPlan(sections, 'dailyPlanContent');
+            updateDailyCompletionBadge(sections);
+            document.getElementById('weeklyActions').style.display = 'flex';
+            document.getElementById('dailyActions').style.display = 'flex';
+
+            hideLoading();
+            showToast('计划生成成功！', 'success');
+        } catch (error) {
+            hideLoading();
+            showToast(`计划生成失败: ${error.message}`, 'error');
+        }
+    });
+}
+
+function renderWeeklyPlan(text) {
+    const container = document.getElementById('weeklyPlanContent');
+    if (!text) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📅</div><div class="title">尚未生成周计划</div></div>';
+        return;
+    }
+    container.innerHTML = `<div class="summary-content">${renderMarkdown(text)}</div>`;
+    document.getElementById('weeklyActions').style.display = 'flex';
+}
+
+// ==================== Daily Plan Navigation ====================
+function updateDateLabel() {
+    document.getElementById('currentDateLabel').textContent = formatDateCN(currentDate);
+}
+
+function navigateDate(delta) {
+    currentDate.setDate(currentDate.getDate() + delta);
+    updateDateLabel();
+    refreshDailyPlan();
+}
+
+function refreshDailyPlan() {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+
+    if (dayPlan && dayPlan.sections) {
+        sanitizeSections(dayPlan.sections);
+        renderPlan(dayPlan.sections, 'dailyPlanContent');
+        updateDailyCompletionBadge(dayPlan.sections);
+        document.getElementById('dailyActions').style.display = 'flex';
+    } else {
+        document.getElementById('dailyPlanContent').innerHTML =
+            '<div class="empty-state"><div class="icon">📝</div><div class="title">该日期暂无计划</div></div>';
+        document.getElementById('dailyCompletionBadge').innerHTML = '';
+        document.getElementById('dailyActions').style.display = 'none';
+    }
+
+    const weekKey = getWeekKey(currentDate);
+    const weeklyPlans = loadData('planai_weekly_plans') || {};
+    renderWeeklyPlan(weeklyPlans[weekKey]?.content || '');
+}
+
+// ==================== Plan Type Switch ====================
+function switchPlanType(type) {
+    document.querySelectorAll('.plan-type-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('weeklyPlanSection').classList.toggle('hidden', type !== 'weekly');
+    document.getElementById('dailyPlanSection').classList.toggle('hidden', type !== 'daily');
+}
+
+// ==================== Save Monthly Goals ====================
+function saveMonthlyGoals() {
+    const goals = document.getElementById('monthlyGoalsInput').value.trim();
+    if (!goals) return;
+    saveData('planai_monthly_goals', {
+        month: formatDate(new Date()).substring(0, 7),
+        content: goals,
+        inputType: 'text',
+        timestamp: Date.now()
+    });
+    showToast('月目标已保存', 'success');
+}
+
+// ==================== Inline Editing ====================
+function inlineEditTask(el) {
+    if (el.contentEditable === 'true') return;
+    const original = el.textContent;
+    el.contentEditable = 'true';
+    el.focus();
+
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    function finishEdit() {
+        el.contentEditable = 'false';
+        el.removeEventListener('blur', finishEdit);
+        el.removeEventListener('keydown', onKey);
+        const newText = el.textContent.trim();
+        if (newText !== original && newText) {
+            const itemEl = el.closest('.plan-item');
+            if (itemEl) {
+                const taskId = itemEl.dataset.id;
+                updateTaskText(taskId, newText);
+            }
+        } else if (!newText) {
+            el.textContent = original;
+        }
+    }
+    function onKey(e) {
+        if (e.key === 'Enter') { e.preventDefault(); finishEdit(); }
+        if (e.key === 'Escape') { el.textContent = original; finishEdit(); }
+    }
+    el.addEventListener('blur', finishEdit);
+    el.addEventListener('keydown', onKey);
+}
+
+function inlineEditTitle(el) {
+    if (el.contentEditable === 'true') return;
+    const original = el.textContent;
+    el.contentEditable = 'true';
+    el.focus();
+
+    function finishEdit() {
+        el.contentEditable = 'false';
+        el.removeEventListener('blur', finishEdit);
+        el.removeEventListener('keydown', onKey);
+        const newText = el.textContent.trim();
+        if (newText !== original && newText) {
+            const si = parseInt(el.dataset.si);
+            updateSectionTitle(si, newText);
+        } else if (!newText) {
+            el.textContent = original;
+        }
+    }
+    function onKey(e) {
+        if (e.key === 'Enter') { e.preventDefault(); finishEdit(); }
+        if (e.key === 'Escape') { el.textContent = original; finishEdit(); }
+    }
+    el.addEventListener('blur', finishEdit);
+    el.addEventListener('keydown', onKey);
+}
+
+function inlineEditText(el) {
+    if (el.contentEditable === 'true') return;
+    const original = el.textContent;
+    el.contentEditable = 'true';
+    el.focus();
+
+    function finishEdit() {
+        el.contentEditable = 'false';
+        el.removeEventListener('blur', finishEdit);
+        el.removeEventListener('keydown', onKey);
+        const newText = el.textContent.trim();
+        if (newText !== original) {
+            const si = parseInt(el.dataset.si);
+            const ii = parseInt(el.dataset.ii);
+            updatePlainText(si, ii, newText);
+        }
+    }
+    function onKey(e) {
+        if (e.key === 'Enter') { e.preventDefault(); finishEdit(); }
+        if (e.key === 'Escape') { el.textContent = original; finishEdit(); }
+    }
+    el.addEventListener('blur', finishEdit);
+    el.addEventListener('keydown', onKey);
+}
+
+function updateTaskText(taskId, newText) {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+    if (!dayPlan || !dayPlan.sections) return;
+
+    const oldText = _collectCurrentText(dayPlan.sections);
+    dayPlan.sections.forEach(section => {
+        section.items.forEach(item => {
+            if (item.id === taskId) {
+                item.text = newText;
+                item.raw = `- ${newText}`;
+            }
+        });
+    });
+    dayPlan.current = sectionsToText(dayPlan.sections);
+    dayPlan.timestamp = Date.now();
+    dailyPlans[dateKey] = dayPlan;
+    saveData('planai_daily_plans', dailyPlans);
+    _autoLearnIfNeeded(dayPlan, oldText);
+}
+
+function updateSectionTitle(si, newTitle) {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+    if (!dayPlan || !dayPlan.sections || !dayPlan.sections[si]) return;
+
+    dayPlan.sections[si].title = newTitle;
+    dayPlan.current = sectionsToText(dayPlan.sections);
+    dailyPlans[dateKey] = dayPlan;
+    saveData('planai_daily_plans', dailyPlans);
+}
+
+function updatePlainText(si, ii, newText) {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+    if (!dayPlan || !dayPlan.sections || !dayPlan.sections[si]) return;
+
+    dayPlan.sections[si].items[ii].text = newText;
+    dayPlan.current = sectionsToText(dayPlan.sections);
+    dailyPlans[dateKey] = dayPlan;
+    saveData('planai_daily_plans', dailyPlans);
+}
+
+function deleteTask(taskId) {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+    if (!dayPlan || !dayPlan.sections) return;
+
+    const oldText = _collectCurrentText(dayPlan.sections);
+    dayPlan.sections.forEach(section => {
+        section.items = section.items.filter(item => item.id !== taskId);
+    });
+    dayPlan.current = sectionsToText(dayPlan.sections);
+    dayPlan.timestamp = Date.now();
+    dailyPlans[dateKey] = dayPlan;
+    saveData('planai_daily_plans', dailyPlans);
+    renderPlan(dayPlan.sections, 'dailyPlanContent');
+    updateDailyCompletionBadge(dayPlan.sections);
+    refreshAnalysisStats();
+    _autoLearnIfNeeded(dayPlan, oldText);
+}
+
+function addNewTask(sectionIndex) {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+    if (!dayPlan || !dayPlan.sections || !dayPlan.sections[sectionIndex]) return;
+
+    const newItem = {
+        id: generateId(),
+        text: '新任务',
+        completed: false,
+        raw: '- 新任务'
+    };
+    dayPlan.sections[sectionIndex].items.push(newItem);
+    dayPlan.current = sectionsToText(dayPlan.sections);
+    dayPlan.timestamp = Date.now();
+    dailyPlans[dateKey] = dayPlan;
+    saveData('planai_daily_plans', dailyPlans);
+    renderPlan(dayPlan.sections, 'dailyPlanContent');
+    updateDailyCompletionBadge(dayPlan.sections);
+
+    setTimeout(() => {
+        const newEl = document.querySelector(`.plan-item[data-id="${newItem.id}"] .plan-item-text`);
+        if (newEl) inlineEditTask(newEl);
+    }, 50);
+}
+
+function _collectCurrentText(sections) {
+    return sectionsToText(sections);
+}
+
+const _autoLearnDebounced = debounce((dayPlan, oldText) => {
+    const newText = sectionsToText(dayPlan.sections);
+    if (oldText !== newText && dayPlan.original) {
+        const diff = detectModifications(dayPlan.original, newText);
+        saveModification(formatDate(currentDate), diff);
+        triggerModificationLearning(dayPlan.original, newText);
+    }
+}, 5000);
+
+function _autoLearnIfNeeded(dayPlan, oldText) {
+    _autoLearnDebounced(dayPlan, oldText);
+}
+
+// ==================== Paste Image Handler ====================
+document.addEventListener('paste', function(e) {
+    const activeTab = loadData('planai_active_tab');
+    if (activeTab !== 'upload') return;
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            if (!blob) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const base64 = ev.target.result;
+                const plans = loadData('planai_uploaded_plans') || [];
+                plans.push({
+                    id: generateId(),
+                    name: `粘贴截图 ${new Date().toLocaleString('zh-CN')}`,
+                    type: 'image',
+                    content: base64,
+                    mimeType: blob.type,
+                    timestamp: Date.now()
+                });
+                saveData('planai_uploaded_plans', plans);
+                renderHistoryList();
+                showToast('已粘贴截图', 'success');
+            };
+            reader.readAsDataURL(blob);
+            return;
+        }
+    }
+});
+
+// ==================== Modification Learning (Prompt 3) ====================
+async function triggerModificationLearning(originalPlan, modifiedPlan) {
+    try {
+        const profile = loadData('planai_style_profile');
+        if (!profile) return;
+
+        const messages = [
+            { role: 'system', content: PROMPTS.MODIFICATION_LEARNING },
+            { role: 'user', content: [
+                `【AI 生成的原始计划】\n${originalPlan}`,
+                `\n【用户修改后的计划】\n${modifiedPlan}`,
+                `\n【当前风格画像】\n${JSON.stringify(profile, null, 2)}`
+            ].join('\n') }
+        ];
+
+        const result = await callWithRetry(messages, { temperature: 0.3 });
+        const learnings = extractJSON(result);
+        const updatedProfile = applyProfileUpdates(profile, learnings);
+        saveData('planai_style_profile', updatedProfile);
+
+        const history = loadData('planai_modification_history') || [];
+        const lastEntry = history[history.length - 1];
+        if (lastEntry) {
+            lastEntry.learnings = learnings;
+            saveData('planai_modification_history', history);
+        }
+    } catch (error) {
+        console.warn('修改学习失败:', error.message);
+    }
+}
+
+// ==================== Daily Summary (Prompt 4) ====================
+async function generateDailySummary() {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+
+    if (!dayPlan || !dayPlan.sections) {
+        showToast('今日没有计划数据，无法生成总结', 'warning');
+        return;
+    }
+
+    await withApiLock(async () => {
+        showLoading('正在生成今日总结...');
+        try {
+            const todayPlanText = buildTodayPlanWithStatus(dayPlan.sections);
+            const modHistory = loadData('planai_modification_history') || [];
+            const todayMods = modHistory.filter(m => m.date === dateKey);
+            const modText = todayMods.length > 0
+                ? todayMods.map(m => `新增: ${m.diff.added.join(', ')}\n删除: ${m.diff.removed.join(', ')}`).join('\n')
+                : '';
+            const trend = getCompletionTrend();
+            const trendText = formatCompletionTrend(trend);
+
+            const messages = [
+                { role: 'system', content: PROMPTS.DAILY_SUMMARY },
+                { role: 'user', content: [
+                    `【今日计划与完成状态】\n${todayPlanText}`,
+                    modText ? `\n【用户对计划的修改记录】\n${modText}` : '',
+                    trendText ? `\n【近期完成率趋势】\n${trendText}` : ''
+                ].join('\n') }
+            ];
+
+            const result = await callWithRetry(messages);
+
+            const summaries = loadData('planai_summaries') || {};
+            const stats = calculateCompletionStats(dayPlan.sections);
+            summaries[dateKey] = { content: result, stats, timestamp: Date.now() };
+            saveData('planai_summaries', summaries);
+
+            document.getElementById('dailySummaryContent').innerHTML =
+                `<div class="summary-content">${renderMarkdown(result)}</div>`;
+            refreshAnalysisStats();
+
+            hideLoading();
+            showToast('今日总结已生成！正在生成明日计划...', 'success');
+
+            await generateTomorrowPlan(result, stats);
+        } catch (error) {
+            hideLoading();
+            showToast(`总结生成失败: ${error.message}`, 'error');
+        }
+    });
+}
+
+function buildTodayPlanWithStatus(sections) {
+    let text = '';
+    sections.forEach(section => {
+        if (section.title) text += `## ${section.title}\n`;
+        section.items.forEach(item => {
+            if (item.isPlainText) {
+                text += `${item.text}\n`;
+            } else {
+                const status = item.completed ? '✅' : '❌';
+                text += `- ${status} ${item.text}\n`;
+            }
+        });
+        text += '\n';
+    });
+    return text.trim();
+}
+
+// ==================== Tomorrow Plan (Prompt 5) ====================
+async function generateTomorrowPlan(summaryText, stats) {
+    showLoading('正在生成明日计划...');
+    try {
+        const profile = getEffectiveProfile(loadData('planai_style_profile'));
+        const monthlyGoals = loadData('planai_monthly_goals');
+        const plans = loadData('planai_uploaded_plans') || [];
+        const historySample = plans.filter(p => p.type === 'text').slice(-1).map(p => p.content).join('\n') || '';
+
+        const modHistory = loadData('planai_modification_history') || [];
+        const recentMods = modHistory.slice(-3);
+        const modInsights = recentMods.length > 0
+            ? recentMods.map(m => m.learnings ? JSON.stringify(m.learnings.insights || []) : '').filter(Boolean).join('\n')
+            : '';
+
+        const carryoverMatch = summaryText.match(/顺延[\s\S]*$/);
+        const carryoverItems = carryoverMatch ? carryoverMatch[0] : '无需顺延的事项';
+
+        const tomorrowDate = new Date(currentDate);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const days = ['日', '一', '二', '三', '四', '五', '六'];
+
+        const messages = [
+            { role: 'system', content: PROMPTS.TOMORROW_PLAN },
+            { role: 'user', content: [
+                `【风格画像】\n${JSON.stringify(profile, null, 2)}`,
+                `\n【明天是${tomorrowDate.getFullYear()}年${tomorrowDate.getMonth()+1}月${tomorrowDate.getDate()}日 周${days[tomorrowDate.getDay()]}】`,
+                monthlyGoals ? `\n【本月目标（参考）】\n${monthlyGoals.content}` : '',
+                `\n【今日未完成需顺延事项】\n${carryoverItems}`,
+                modInsights ? `\n【今日修改行为与学到的偏好】\n${modInsights}` : '',
+                historySample ? `\n【历史计划示例（风格参考）】\n${historySample}` : ''
+            ].join('\n') }
+        ];
+
+        const result = await callWithRetry(messages);
+
+        const tomorrowKey = formatDate(tomorrowDate);
+        const dailyPlans = loadData('planai_daily_plans') || {};
+        const sections = parsePlanText(result, profile.completion_markers);
+        dailyPlans[tomorrowKey] = {
+            original: result,
+            current: result,
+            sections: sections,
+            completionStatus: {},
+            timestamp: Date.now()
+        };
+        saveData('planai_daily_plans', dailyPlans);
+
+        document.getElementById('tomorrowPlanContent').innerHTML =
+            `<div class="summary-content">${renderMarkdown(result)}</div>`;
+        document.getElementById('tomorrowActions').style.display = 'flex';
+
+        hideLoading();
+        showToast('明日计划已生成！', 'success');
+    } catch (error) {
+        hideLoading();
+        showToast(`明日计划生成失败: ${error.message}`, 'error');
+    }
+}
+
+function acceptTomorrowPlan() {
+    showToast('明日计划已确认接受', 'success');
+    document.getElementById('tomorrowActions').style.display = 'none';
+}
+
+// ==================== Analysis Stats ====================
+function refreshAnalysisStats() {
+    const dateKey = formatDate(currentDate);
+    const dailyPlans = loadData('planai_daily_plans') || {};
+    const dayPlan = dailyPlans[dateKey];
+
+    if (dayPlan && dayPlan.sections) {
+        const stats = calculateCompletionStats(dayPlan.sections);
+        document.getElementById('statTotal').textContent = stats.total;
+        document.getElementById('statDone').textContent = stats.completed;
+        document.getElementById('statRate').textContent = stats.rate + '%';
+    } else {
+        document.getElementById('statTotal').textContent = '-';
+        document.getElementById('statDone').textContent = '-';
+        document.getElementById('statRate').textContent = '-';
+    }
+
+    const summaries = loadData('planai_summaries') || {};
+    if (summaries[dateKey]) {
+        document.getElementById('dailySummaryContent').innerHTML =
+            `<div class="summary-content">${renderMarkdown(summaries[dateKey].content)}</div>`;
+    }
+}
+
+// ==================== Settings Functions ====================
+function saveApiConfig() {
+    const apiKey = document.getElementById('settingsApiKey').value.trim();
+    const model = document.getElementById('settingsModel').value;
+
+    if (!apiKey) {
+        showToast('请输入 API Key', 'warning');
+        return;
+    }
+
+    saveData('planai_api_config', { apiKey, model });
+    updateApiStatus(true);
+    showToast('API 配置已保存', 'success');
+}
+
+async function testApiConnection() {
+    const apiKey = document.getElementById('settingsApiKey').value.trim();
+    const model = document.getElementById('settingsModel').value;
+
+    if (!apiKey) {
+        showToast('请先输入 API Key', 'warning');
+        return;
+    }
+
+    showLoading('正在测试连接...');
+    try {
+        const result = await callOpenRouter(
+            [{ role: 'user', content: '请回复"连接成功"四个字' }],
+            { apiKey, model, maxTokens: 50 }
+        );
+        hideLoading();
+        showToast(`连接成功！模型响应: ${result.substring(0, 50)}`, 'success');
+        saveApiConfig();
+    } catch (error) {
+        hideLoading();
+        showToast(`连接失败: ${error.message}`, 'error');
+    }
+}
+
+function updateApiStatus(connected) {
+    const dot = document.getElementById('apiDot');
+    const text = document.getElementById('apiStatusText');
+    if (connected) {
+        dot.classList.remove('off');
+        const config = loadData('planai_api_config') || {};
+        const modelName = config.model ? config.model.split('/').pop() : 'unknown';
+        text.textContent = `已连接 · ${modelName}`;
+    } else {
+        dot.classList.add('off');
+        text.textContent = '未配置 API Key';
+    }
+}
+
+function maskApiKey(key) {
+    if (!key || key.length < 10) return '***';
+    return key.substring(0, 8) + '...' + key.substring(key.length - 4);
+}
+
+// ==================== Data Import/Export ====================
+function exportAllData() {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('planai_')) {
+            data[key] = loadData(key);
+        }
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `planai_backup_${formatDate(new Date())}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('数据已导出', 'success');
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            let count = 0;
+            for (const [key, value] of Object.entries(data)) {
+                if (key.startsWith('planai_')) {
+                    saveData(key, value);
+                    count++;
+                }
+            }
+            showToast(`成功导入 ${count} 项数据`, 'success');
+            initializeApp();
+        } catch (err) {
+            showToast('导入失败：文件格式不正确', 'error');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function clearAllData() {
+    if (!confirm('确定要清除所有数据吗？此操作不可恢复！建议先导出备份。')) return;
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('planai_')) keys.push(key);
+    }
+    keys.forEach(key => localStorage.removeItem(key));
+    showToast('所有数据已清除', 'info');
+    initializeApp();
+}
+
+// ==================== Initialize ====================
+function initializeApp() {
+    const config = loadData('planai_api_config');
+    if (config && config.apiKey) {
+        document.getElementById('settingsApiKey').value = config.apiKey;
+        document.getElementById('settingsModel').value = config.model || 'google/gemini-3-flash-preview';
+        updateApiStatus(true);
+    } else {
+        updateApiStatus(false);
+    }
+
+    renderHistoryList();
+
+    const profile = loadData('planai_style_profile');
+    if (profile) displayStyleProfile(profile);
+
+    const goals = loadData('planai_monthly_goals');
+    if (goals) document.getElementById('monthlyGoalsInput').value = goals.content || '';
+
+    currentDate = new Date();
+    updateDateLabel();
+
+    const weekKey = getWeekKey(currentDate);
+    const weeklyPlans = loadData('planai_weekly_plans') || {};
+    if (weeklyPlans[weekKey]) renderWeeklyPlan(weeklyPlans[weekKey].content);
+
+    refreshDailyPlan();
+    refreshAnalysisStats();
+
+    const savedTab = loadData('planai_active_tab');
+    if (savedTab && TABS.includes(savedTab)) {
+        switchTab(savedTab);
+    }
+}
+
+window.addEventListener('load', initializeApp);
+</script>
+</body>
+</html>
